@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Pizza Worker | Station Manager</title>
+  <style>
+    :root {
+      --bg: #1a120b;
+      --surface: #2a1f15;
+      --card: #35281c;
+      --card-hover: #42301f;
+      --accent: #e85d04;
+      --accent2: #f48c06;
+      --gold: #ffba08;
+      --text: #fdf6e9;
+      --muted: #a89070;
+      --success: #2a9d8f;
+      --danger: #e63946;
+      --border: #4a3728;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(26, 18, 11, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 1.35rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffba08, #e85d04);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stats {
+      display: flex;
+      gap: 14px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface);
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .stat span { color: var(--gold); }
+
+    .station-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px 14px 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 8px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 12px 12px 0 0;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .tab:hover { color: var(--text); border-color: var(--accent2); }
+    .tab.active {
+      background: var(--card);
+      color: var(--gold);
+      border-color: var(--accent);
+      border-bottom-color: var(--card);
+      transform: translateY(2px);
+    }
+    .tab .badge {
+      display: inline-block;
+      background: var(--danger);
+      color: white;
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 4px;
+    }
+
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 14px 100px;
+    }
+
+    .station-panel {
+      display: none;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 16px 16px;
+      padding: 18px;
+      min-height: 420px;
+    }
+    .station-panel.active { display: block; animation: fadeUp 0.25s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      color: var(--gold);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .customer-queue {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .customer {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: border-color 0.2s;
+    }
+    .customer.angry { border-color: var(--danger); animation: shake 0.4s ease; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    .customer-info { flex: 1; }
+    .customer-name { font-weight: 700; font-size: 0.95rem; }
+    .customer-order { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+    .patience-bar {
+      height: 6px;
+      background: #2a1f15;
+      border-radius: 3px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .patience-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s linear, background 0.3s;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(232, 93, 4, 0.4); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn.secondary {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text);
+    }
+    .btn.secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+    .btn.small { padding: 7px 12px; font-size: 0.8rem; }
+    .btn.success { background: linear-gradient(135deg, #2a9d8f, #1a7a6d); }
+
+    .pizza-builder {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 16px;
+      border: 2px dashed var(--border);
+      text-align: center;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .pizza-visual {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #e8c39e;
+      border: 4px solid #c4a070;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
+    }
+    .ingredients-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .ing-btn {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .ing-btn:hover { border-color: var(--accent2); background: var(--card-hover); }
+    .ing-btn.used { opacity: 0.4; pointer-events: none; }
+
+    .oven-slot {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .oven-slot.cooking { border-color: var(--accent2); }
+    .oven-slot.ready { border-color: var(--success); animation: pulse 1.2s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(42, 157, 143, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(42, 157, 143, 0); }
+    }
+
+    .cook-bar {
+      height: 8px;
+      background: #2a1f15;
+      border-radius: 4px;
+      margin-top: 8px;
+      overflow: hidden;
+      width: 140px;
+    }
+    .cook-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent2), var(--gold));
+      border-radius: 4px;
+      transition: width 0.2s linear;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal h2 { margin-bottom: 8px; }
+    .modal p { color: var(--muted); margin-bottom: 16px; font-size: 0.95rem; }
+
+    .shop-grid {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .shop-item {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .shop-item.owned { opacity: 0.55; }
+    .shop-item-info { flex: 1; }
+    .shop-item-name { font-weight: 800; }
+    .shop-item-desc { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .day-summary {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      text-align: center;
+    }
+    .summary-stat { font-size: 0.85rem; color: var(--muted); }
+    .summary-stat strong {
+      display: block;
+      font-size: 1.4rem;
+      color: var(--gold);
+      margin-top: 2px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--card);
+      border: 2px solid var(--accent);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      z-index: 200;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">🍕 Pizza Worker</div>
+    <div class="stats">
+      <div class="stat">📅 Day <span id="dayNum">1</span></div>
+      <div class="stat">💰 $<span id="money">50</span></div>
+      <div class="stat">⏰ <span id="timeLeft">3:00</span></div>
+    </div>
+  </div>
+
+  <div class="station-tabs">
+    <button class="tab active" data-station="counter" onclick="switchStation('counter')">
+      🧾 Counter <span class="badge" id="counterBadge" style="display:none">0</span>
+    </button>
+    <button class="tab" data-station="prep" onclick="switchStation('prep')">
+      🔪 Prep
+    </button>
+    <button class="tab" data-station="oven" onclick="switchStation('oven')">
+      🔥 Oven <span class="badge" id="ovenBadge" style="display:none">0</span>
+    </button>
+  </div>
+
+  <div class="main">
+    <div id="station-counter" class="station-panel active">
+      <h2>🧾 Counter — Take Orders</h2>
+      <div class="customer-queue" id="customerQueue"></div>
+      <div class="empty-state" id="counterEmpty">
+        <div class="icon">🪑</div>
+        <div>No customers waiting yet...</div>
+        <div class="hint">They’ll start arriving soon!</div>
+      </div>
+    </div>
+
+    <div id="station-prep" class="station-panel">
+      <h2>🔪 Prep Area — Build Pizzas</h2>
+      <div id="prepContent">
+        <div class="empty-state">
+          <div class="icon">🍕</div>
+          <div>No order selected</div>
+          <div class="hint">Take an order at the Counter first</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="station-oven" class="station-panel">
+      <h2>🔥 Oven — Cook & Serve</h2>
+      <div id="ovenSlots"></div>
+      <div class="empty-state" id="ovenEmpty">
+        <div class="icon">🔥</div>
+        <div>Oven is empty</div>
+        <div class="hint">Prep a pizza and send it here</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="dayEndOverlay">
+    <div class="modal">
+      <h2>🌅 Day <span id="endDayNum">1</span> Complete!</h2>
+      <div class="day-summary">
+        <div class="summary-stat">Orders Served<strong id="servedCount">0</strong></div>
+        <div class="summary-stat">Earned<strong id="earnedAmount">$0</strong></div>
+        <div class="summary-stat">Angry Customers<strong id="angryCount">0</strong></div>
+        <div class="summary-stat">Tips<strong id="tipsAmount">$0</strong></div>
+      </div>
+      <p id="dayMessage">Nice work! Ready for the next day?</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" onclick="openShop()" style="flex:1">🛒 Shop</button>
+        <button class="btn success" onclick="startNextDay()" style="flex:1">Next Day →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="shopOverlay">
+    <div class="modal">
+      <h2>🛒 Upgrade Shop</h2>
+      <p>Money: $<span id="shopMoney">0</span></p>
+      <div class="shop-grid" id="shopGrid"></div>
+      <button class="btn secondary" onclick="closeShop()" style="width:100%">Close Shop</button>
+    </div>
+  </div>
+
+  <div class="overlay open" id="startOverlay">
+    <div class="modal">
+      <h2 style="font-size:1.6rem">🍕 Pizza Worker</h2>
+      <p>
+        Run your own pizza shop! Switch between <strong>Counter</strong>, <strong>Prep</strong>, and <strong>Oven</strong> stations.
+        Serve customers before they get angry. Survive each day and upgrade your shop.
+      </p>
+      <p style="font-size:0.85rem; color:var(--muted)">
+        • Take orders at the Counter<br>
+        • Build pizzas in the Prep Area<br>
+        • Cook & serve from the Oven<br>
+        • Each day gets harder!
+      </p>
+      <button class="btn" onclick="startGame()" style="width:100%; margin-top:10px">Start Day 1</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const PIZZA_TYPES = [
+      { id: 'margherita', name: 'Margherita', ingredients: ['dough', 'sauce', 'cheese'], basePrice: 12, emoji: '🍕' },
+      { id: 'pepperoni', name: 'Pepperoni', ingredients: ['dough', 'sauce', 'cheese', 'pepperoni'], basePrice: 15, emoji: '🍕' },
+      { id: 'veggie', name: 'Veggie', ingredients: ['dough', 'sauce', 'cheese', 'peppers', 'mushrooms'], basePrice: 14, emoji: '🥦' },
+      { id: 'meat', name: 'Meat Lovers', ingredients: ['dough', 'sauce', 'cheese', 'pepperoni', 'sausage'], basePrice: 18, emoji: '🥩' },
+      { id: 'hawaiian', name: 'Hawaiian', ingredients: ['dough', 'sauce', 'cheese', 'ham', 'pineapple'], basePrice: 16, emoji: '🍍' }
+    ];
+
+    const ALL_INGREDIENTS = {
+      dough: { name: 'Dough', emoji: '🫓' },
+      sauce: { name: 'Sauce', emoji: '🍅' },
+      cheese: { name: 'Cheese', emoji: '🧀' },
+      pepperoni: { name: 'Pepperoni', emoji: '🍖' },
+      sausage: { name: 'Sausage', emoji: '🌭' },
+      peppers: { name: 'Peppers', emoji: '🫑' },
+      mushrooms: { name: 'Mushrooms', emoji: '🍄' },
+      ham: { name: 'Ham', emoji: '🥓' },
+      pineapple: { name: 'Pineapple', emoji: '🍍' }
+    };
+
+    const UPGRADES = [
+      { id: 'better_cheese', name: 'Premium Cheese', desc: '+$2 per pizza', cost: 40, type: 'ingredient', effect: { priceBonus: 2 } },
+      { id: 'fancy_sauce', name: 'Gourmet Sauce', desc: '+$2 per pizza', cost: 45, type: 'ingredient', effect: { priceBonus: 2 } },
+      { id: 'ads_basic', name: 'Flyer Ads', desc: '+15% more customers', cost: 60, type: 'ad', effect: { customerRate: 0.15 } },
+      { id: 'ads_radio', name: 'Radio Spots', desc: '+25% more customers', cost: 120, type: 'ad', effect: { customerRate: 0.25 } },
+      { id: 'decor_plants', name: 'Nice Plants', desc: 'Customers wait +20% longer', cost: 50, type: 'decor', effect: { patience: 0.2 } },
+      { id: 'decor_music', name: 'Background Music', desc: 'Customers wait +25% longer', cost: 90, type: 'decor', effect: { patience: 0.25 } },
+      { id: 'faster_oven', name: 'Hotter Oven', desc: 'Cook time -25%', cost: 80, type: 'equipment', effect: { cookSpeed: 0.25 } },
+      { id: 'extra_oven', name: 'Second Oven Slot', desc: 'Cook 2 pizzas at once', cost: 150, type: 'equipment', effect: { ovenSlots: 1 } }
+    ];
+
+    const NAMES = ['Alex', 'Jordan', 'Sam', 'Taylor', 'Casey', 'Riley', 'Morgan', 'Jamie', 'Quinn', 'Avery', 'Parker', 'Reese', 'Skyler', 'Drew', 'Cameron'];
+
+    let state = {
+      day: 1,
+      money: 50,
+      timeLeft: 180,
+      running: false,
+      customers: [],
+      activeOrder: null,
+      oven: [],
+      ownedUpgrades: [],
+      dayStats: { served: 0, earned: 0, angry: 0, tips: 0 },
+      customerIdCounter: 0
+    };
+
+    let timers = { game: null, spawn: null };
+
+    function $(id) { return document.getElementById(id); }
+
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function getPriceBonus() {
+      return state.ownedUpgrades.reduce((sum, id) => {
+        const u = UPGRADES.find(x => x.id === id);
+        return sum + (u?.effect?.priceBonus || 0);
+      }, 0);
+    }
+
+    function getPatienceBonus() {
+      return state.ownedUpgrades.reduce((sum, id) => {
+        const u = UPGRADES.find(x => x.id === id);
+        return sum + (u?.effect?.patience || 0);
+      }, 0);
+    }
+
+    function getCustomerRateBonus() {
+      return state.ownedUpgrades.reduce((sum, id) => {
+        const u = UPGRADES.find(x => x.id === id);
+        return sum + (u?.effect?.customerRate || 0);
+      }, 0);
+    }
+
+    function getCookSpeedBonus() {
+      return state.ownedUpgrades.reduce((sum, id) => {
+        const u = UPGRADES.find(x => x.id === id);
+        return sum + (u?.effect?.cookSpeed || 0);
+      }, 0);
+    }
+
+    function getOvenSlots() {
+      let slots = 1;
+      state.ownedUpgrades.forEach(id => {
+        const u = UPGRADES.find(x => x.id === id);
+        if (u?.effect?.ovenSlots) slots += u.effect.ovenSlots;
+      });
+      return slots;
+    }
+
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function switchStation(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.station === name));
+      document.querySelectorAll('.station-panel').forEach(p => p.classList.toggle('active', p.id === `station-${name}`));
+      if (name === 'prep') renderPrep();
+      if (name === 'oven') renderOven();
+      if (name === 'counter') renderCounter();
+    }
+
+    function spawnCustomer() {
+      if (!state.running) return;
+      const maxCustomers = 3 + Math.floor(state.day / 2);
+      if (state.customers.length >= maxCustomers) return;
+
+      const unlockedPizzas = PIZZA_TYPES.slice(0, Math.min(2 + Math.floor(state.day / 2), PIZZA_TYPES.length));
+      const pizza = unlockedPizzas[Math.floor(Math.random() * unlockedPizzas.length)];
+      const basePatience = 45 + Math.random() * 25;
+      const patience = basePatience * (1 + getPatienceBonus()) * (1 - (state.day - 1) * 0.04);
+
+      const customer = {
+        id: ++state.customerIdCounter,
+        name: NAMES[Math.floor(Math.random() * NAMES.length)],
+        pizza,
+        patience: patience,
+        maxPatience: patience,
+        status: 'waiting'
+      };
+      state.customers.push(customer);
+      renderCounter();
+      updateBadges();
+    }
+
+    function takeOrder(customerId) {
+      const c = state.customers.find(x => x.id === customerId);
+      if (!c || c.status !== 'waiting') return;
+      if (state.activeOrder) {
+        toast('Finish current pizza first!');
+        return;
+      }
+      c.status = 'prepping';
+      state.activeOrder = {
+        customerId: c.id,
+        pizza: c.pizza,
+        added: []
+      };
+      toast(`Order taken: ${c.pizza.name}`);
+      renderCounter();
+      switchStation('prep');
+      renderPrep();
+      updateBadges();
+    }
+
+    function renderPrep() {
+      const el = $('prepContent');
+      if (!state.activeOrder) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🍕</div>
+            <div>No order selected</div>
+            <div class="hint">Take an order at the Counter first</div>
+          </div>`;
+        return;
+      }
+
+      const order = state.activeOrder;
+      const needed = order.pizza.ingredients;
+      const allAdded = needed.every(ing => order.added.includes(ing));
+
+      el.innerHTML = `
+        <div class="pizza-builder">
+          <div style="font-weight:800; margin-bottom:4px">${order.pizza.emoji} ${order.pizza.name}</div>
+          <div class="pizza-visual">${order.added.length ? '🍕' : '🫓'}</div>
+          <div style="font-size:0.85rem; color:var(--muted)">
+            Added: ${order.added.length ? order.added.map(i => ALL_INGREDIENTS[i].emoji).join(' ') : 'Nothing yet'}
+          </div>
+          <div class="ingredients-grid">
+            ${needed.map(ing => {
+              const used = order.added.includes(ing);
+              return `<button class="ing-btn ${used ? 'used' : ''}" onclick="addIngredient('${ing}')" ${used ? 'disabled' : ''}>
+                ${ALL_INGREDIENTS[ing].emoji}<br>${ALL_INGREDIENTS[ing].name}
+              </button>`;
+            }).join('')}
+          </div>
+          <button class="btn success" ${allAdded ? '' : 'disabled'} onclick="sendToOven()" style="margin-top:8px">
+            🔥 Send to Oven
+          </button>
+        </div>`;
+    }
+
+    function addIngredient(ing) {
+      if (!state.activeOrder) return;
+      if (state.activeOrder.added.includes(ing)) return;
+      state.activeOrder.added.push(ing);
+      renderPrep();
+    }
+
+    function sendToOven() {
+      if (!state.activeOrder) return;
+      const needed = state.activeOrder.pizza.ingredients;
+      if (!needed.every(ing => state.activeOrder.added.includes(ing))) {
+        toast('Missing ingredients!');
+        return;
+      }
+
+      const slots = getOvenSlots();
+      if (state.oven.length >= slots) {
+        toast('Oven is full!');
+        return;
+      }
+
+      const baseCook = 12 + Math.random() * 6;
+      const cookTime = baseCook * (1 - getCookSpeedBonus());
+
+      state.oven.push({
+        customerId: state.activeOrder.customerId,
+        pizza: state.activeOrder.pizza,
+        progress: 0,
+        cookTime,
+        ready: false
+      });
+
+      const c = state.customers.find(x => x.id === state.activeOrder.customerId);
+      if (c) c.status = 'cooking';
+
+      state.activeOrder = null;
+      toast('Pizza in the oven!');
+      renderPrep();
+      renderOven();
+      switchStation('oven');
+      updateBadges();
+    }
+
+    function renderOven() {
+      const el = $('ovenSlots');
+      const empty = $('ovenEmpty');
+
+      if (state.oven.length === 0) {
+        el.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      el.innerHTML = state.oven.map((slot, idx) => {
+        const c = state.customers.find(x => x.id === slot.customerId);
+        const pct = Math.min(100, (slot.progress / slot.cookTime) * 100);
+        const cls = slot.ready ? 'ready' : 'cooking';
+        return `
+          <div class="oven-slot ${cls}">
+            <div>
+              <div style="font-weight:800">${slot.pizza.emoji} ${slot.pizza.name}</div>
+              <div style="font-size:0.8rem; color:var(--muted)">For ${c ? c.name : '???'}</div>
+              <div class="cook-bar"><div class="cook-fill" style="width:${pct}%"></div></div>
+            </div>
+            <button class="btn ${slot.ready ? 'success' : ''}" ${slot.ready ? '' : 'disabled'} onclick="servePizza(${idx})">
+              ${slot.ready ? '✅ Serve' : 'Cooking...'}
+            </button>
+          </div>`;
+      }).join('');
+    }
+
+    function servePizza(idx) {
+      const slot = state.oven[idx];
+      if (!slot || !slot.ready) return;
+
+      const c = state.customers.find(x => x.id === slot.customerId);
+      const priceBonus = getPriceBonus();
+      let price = slot.pizza.basePrice + priceBonus;
+
+      let tip = 0;
+      if (c) {
+        const ratio = c.patience / c.maxPatience;
+        if (ratio > 0.6) tip = Math.floor(price * 0.2);
+        else if (ratio > 0.3) tip = Math.floor(price * 0.1);
+      }
+
+      state.money += price + tip;
+      state.dayStats.served++;
+      state.dayStats.earned += price;
+      state.dayStats.tips += tip;
+
+      state.customers = state.customers.filter(x => x.id !== slot.customerId);
+      state.oven.splice(idx, 1);
+
+      toast(`Served! +$${price}${tip ? ` (+$${tip} tip)` : ''}`);
+      updateUI();
+      renderOven();
+      renderCounter();
+      updateBadges();
+    }
+
+    function renderCounter() {
+      const queue = $('customerQueue');
+      const empty = $('counterEmpty');
+      const waiting = state.customers.filter(c => c.status === 'waiting' || c.status === 'prepping' || c.status === 'cooking');
+
+      if (waiting.length === 0) {
+        queue.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      queue.innerHTML = waiting.map(c => {
+        const pct = Math.max(0, (c.patience / c.maxPatience) * 100);
+        let color = pct > 60 ? 'var(--success)' : pct > 30 ? 'var(--gold)' : 'var(--danger)';
+        const angry = pct < 25;
+        return `
+          <div class="customer ${angry ? 'angry' : ''}">
+            <div class="customer-info">
+              <div class="customer-name">${c.name}</div>
+              <div class="customer-order">${c.pizza.emoji} ${c.pizza.name} · $${c.pizza.basePrice + getPriceBonus()}</div>
+              <div class="patience-bar">
+                <div class="patience-fill" style="width:${pct}%; background:${color}"></div>
+              </div>
+            </div>
+            ${c.status === 'waiting'
+              ? `<button class="btn small" onclick="takeOrder(${c.id})">Take Order</button>`
+              : `<span style="font-size:0.8rem; color:var(--muted)">${c.status === 'prepping' ? 'Building...' : 'Cooking...'}</span>`
+            }
+          </div>`;
+      }).join('');
+    }
+
+    function updateBadges() {
+      const waiting = state.customers.filter(c => c.status === 'waiting').length;
+      const badge = $('counterBadge');
+      if (waiting > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = waiting;
+      } else badge.style.display = 'none';
+
+      const ready = state.oven.filter(o => o.ready).length;
+      const ovenBadge = $('ovenBadge');
+      if (ready > 0) {
+        ovenBadge.style.display = 'inline-block';
+        ovenBadge.textContent = ready;
+      } else ovenBadge.style.display = 'none';
+    }
+
+    function updateUI() {
+      $('dayNum').textContent = state.day;
+      $('money').textContent = state.money;
+      $('timeLeft').textContent = formatTime(Math.max(0, Math.floor(state.timeLeft)));
+    }
+
+    function gameTick() {
+      if (!state.running) return;
+
+      state.timeLeft -= 1;
+      updateUI();
+
+      state.customers.forEach(c => {
+        if (c.status === 'waiting' || c.status === 'prepping' || c.status === 'cooking') {
+          c.patience -= 1;
+          if (c.patience <= 0) {
+            state.dayStats.angry++;
+            state.customers = state.customers.filter(x => x.id !== c.id);
+            state.oven = state.oven.filter(o => o.customerId !== c.id);
+            if (state.activeOrder?.customerId === c.id) state.activeOrder = null;
+            toast(`${c.name} left angry!`);
+            renderCounter();
+            renderPrep();
+            renderOven();
+            updateBadges();
+          }
+        }
+      });
+
+      state.oven.forEach(slot => {
+        if (!slot.ready) {
+          slot.progress += 1;
+          if (slot.progress >= slot.cookTime) {
+            slot.ready = true;
+            toast('Pizza ready to serve!');
+          }
+        }
+      });
+      renderOven();
+      renderCounter();
+      updateBadges();
+
+      if (state.timeLeft <= 0) {
+        endDay();
+      }
+    }
+
+    function startGame() {
+      $('startOverlay').classList.remove('open');
+      startDay();
+    }
+
+    function startDay() {
+      state.running = true;
+      state.timeLeft = 150 + state.day * 15;
+      state.customers = [];
+      state.activeOrder = null;
+      state.oven = [];
+      state.dayStats = { served: 0, earned: 0, angry: 0, tips: 0 };
+      state.customerIdCounter = 0;
+
+      updateUI();
+      renderCounter();
+      renderPrep();
+      renderOven();
+      switchStation('counter');
+
+      const baseInterval = Math.max(4000, 9000 - state.day * 500);
+      const rateMult = 1 + getCustomerRateBonus();
+
+      clearInterval(timers.spawn);
+      timers.spawn = setInterval(() => {
+        if (Math.random() < 0.7 * rateMult) spawnCustomer();
+      }, baseInterval / rateMult);
+
+      clearInterval(timers.game);
+      timers.game = setInterval(gameTick, 1000);
+
+      setTimeout(spawnCustomer, 2000);
+      setTimeout(spawnCustomer, 6000);
+    }
+
+    function endDay() {
+      state.running = false;
+      clearInterval(timers.game);
+      clearInterval(timers.spawn);
+
+      $('endDayNum').textContent = state.day;
+      $('servedCount').textContent = state.dayStats.served;
+      $('earnedAmount').textContent = '$' + state.dayStats.earned;
+      $('angryCount').textContent = state.dayStats.angry;
+      $('tipsAmount').textContent = '$' + state.dayStats.tips;
+
+      let msg = 'Solid day!';
+      if (state.dayStats.angry > 2) msg = 'Too many angry customers... try to be faster tomorrow.';
+      else if (state.dayStats.served >= 6) msg = 'Amazing service today!';
+      else if (state.dayStats.served === 0) msg = 'No pizzas sold? Better luck next time.';
+      $('dayMessage').textContent = msg;
+
+      $('dayEndOverlay').classList.add('open');
+    }
+
+    function startNextDay() {
+      $('dayEndOverlay').classList.remove('open');
+      state.day++;
+      const rent = 10 + state.day * 3;
+      state.money = Math.max(0, state.money - rent);
+      toast(`Day ${state.day} rent: -$${rent}`);
+      startDay();
+    }
+
+    function openShop() {
+      $('shopMoney').textContent = state.money;
+      const grid = $('shopGrid');
